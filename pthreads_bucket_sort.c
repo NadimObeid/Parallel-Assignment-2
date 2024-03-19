@@ -13,7 +13,7 @@ void merge_sort(int arr[], int left, int right);
 void merge_buckets(int buckets[][NUM_ELEMENTS], int arr[]);
 void bucket_sort(int arr[]);
 void * runner(void * args);
-void print_array(int arr[], int n);
+void print_array(int arr[]);
 void fill_array(int arr[]);
 
 
@@ -38,18 +38,18 @@ int main() {
     fill_array(arr);
 
     printf("Unsorted Array:\n");
-    print_array(arr, n);
+    print_array(arr);
 
     start = clock();
-    bucket_sort(arr, n);
+    bucket_sort(arr);
     end = clock();
     
     printf("Sorted Array:\n");
-    print_array(arr, n);
+    print_array(arr);
 
     time_taken += ((double) (end - start)) / CLOCKS_PER_SEC;
 
-    printf("time taken: %f seconds\n", time_taken/trials);
+    printf("time taken: %f seconds\n", time_taken);
 
     return 0;
 }
@@ -166,8 +166,8 @@ void * runner(void * args){
     }
     pthread_exit(0);
 }
-void print_array(int arr[], int n) {
-    for (int i = 0; i < n; i++) {
+void print_array(int arr[]) {
+    for (int i = 0; i < NUM_ELEMENTS; i++) {
         printf("%d ", arr[i]);
     }
     printf("\n");
