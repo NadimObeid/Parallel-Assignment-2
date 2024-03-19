@@ -6,6 +6,38 @@
 #define NUM_BUCKETS 10
 #define NUM_ELEMENTS 1000
 
+void merge(int arr[], int left, int mid, int right);
+void merge_sort(int arr[], int left, int right);
+void merge_buckets(int buckets[][NUM_ELEMENTS], int arr[], int n);
+void bucket_sort(int arr[]);
+void * runner(void * args);
+void print_array(int arr[], int n);
+void fill_array(int arr[]);
+
+int main() {
+    clock_t start, end;
+    double total_time;
+    int arr[NUM_ELEMENTS];
+    
+    
+    fill_array(arr);
+    
+    printf("Unsorted Array:\n");
+    print_array(arr, NUM_ELEMENTS);
+
+    start = clock();
+    bucket_sort(arr);
+    end = clock();
+
+    printf("Sorted Array:\n");
+    print_array(arr, NUM_ELEMENTS);
+    
+    total_time = ((double) (end - start)) / CLOCKS_PER_SEC;
+    printf("Time taken: %f seconds\n", total_time);
+
+    return 0;
+}
+
 void merge(int arr[], int left, int mid, int right) {
     int n1 = mid - left + 1;
     int n2 = right - mid;
@@ -64,11 +96,11 @@ void merge_buckets(int buckets[][NUM_ELEMENTS], int arr[], int n) {
     }
 }
 
-void bucket_sort(int arr[], int n) {
+void bucket_sort(int arr[]) {
     int buckets[NUM_BUCKETS][NUM_ELEMENTS];
     int bucket_counts[NUM_BUCKETS] = {0};
 
-    // Initialize buckets in parallel
+
     #pragma omp parallel for collapse(2)
     for (int i = 0; i < NUM_BUCKETS; i++) {
         for (int j = 0; j < NUM_ELEMENTS; j++) {
@@ -76,12 +108,12 @@ void bucket_sort(int arr[], int n) {
         }
     }
 
-    // Distribute elements into buckets in parallel
+
     #pragma omp parallel for
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < NUM_ELEMENTS; i++) {
         int bucket_index = arr[i] / (100 / NUM_BUCKETS);
         
-        // Increment the count for the bucket atomically
+       
         int pos;
     #pragma omp atomic capture
         {
@@ -89,12 +121,12 @@ void bucket_sort(int arr[], int n) {
             bucket_counts[bucket_index]++;
         }
 
-        // Store the value in the bucket
+        
         buckets[bucket_index][pos] = arr[i];
     }
 
 
-    // Sort each bucket using OpenMP tasks
+    
     #pragma omp parallel for
     for (int i = 0; i < NUM_BUCKETS; i++) {
         if (bucket_counts[i] > 0) {
@@ -102,8 +134,8 @@ void bucket_sort(int arr[], int n) {
         }
     }
 
-    // Merge sorted buckets into the original array
-    merge_buckets(buckets, arr, n);
+    
+    merge_buckets(buckets, arr, NUM_ELEMENTS);
 }
 
 void print_array(int arr[], int n) {
@@ -119,27 +151,3 @@ void fill_array(int arr[]){
     }
 }
 
-int main() {
-    clock_t start, end;
-    double total_time;
-    int arr[NUM_ELEMENTS];
-    
-    
-    fill_array(arr);
-    int n = sizeof(arr) / sizeof(arr[0]);
-    
-    printf("Unsorted Array:\n");
-    print_array(arr, n);
-
-    start = clock();
-    bucket_sort(arr, n);
-    end = clock();
-
-    printf("Sorted Array:\n");
-    print_array(arr, n);
-    
-    total_time = ((double) (end - start)) / CLOCKS_PER_SEC;
-    printf("Time taken: %f seconds\n", total_time);
-
-    return 0;
-}

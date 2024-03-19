@@ -3,29 +3,71 @@
 #include <time.h>
 #include <pthread.h>
 
+#define NUM_THREADS 2
 #define NUM_BUCKETS 10
 #define NUM_ELEMENTS 1000
-#define NUM_THREADS 4 // Number of threads to use
 
-// Structure for passing arguments to the thread function
-typedef struct {
-    int thread_id;
-    int buckets[NUM_BUCKETS][NUM_ELEMENTS];
-} ThreadArgs;
+
+void merge(int arr[], int left, int mid, int right);
+void merge_sort(int arr[], int left, int right);
+void merge_buckets(int buckets[][NUM_ELEMENTS], int arr[]);
+void bucket_sort(int arr[]);
+void * runner(void * args);
+void print_array(int arr[], int n);
+void fill_array(int arr[]);
+
+
+typedef struct ThreadArgs{
+    int (*arr)[NUM_ELEMENTS];
+    int left;
+    int right;
+} thread_args;
+
+
+int main() {
+
+    clock_t start, end;
+    double time_taken;
+    
+        
+    int arr[NUM_ELEMENTS];
+        
+
+        
+        
+    fill_array(arr);
+
+    printf("Unsorted Array:\n");
+    print_array(arr, n);
+
+    start = clock();
+    bucket_sort(arr, n);
+    end = clock();
+    
+    printf("Sorted Array:\n");
+    print_array(arr, n);
+
+    time_taken += ((double) (end - start)) / CLOCKS_PER_SEC;
+
+    printf("time taken: %f seconds\n", time_taken/trials);
+
+    return 0;
+}
 
 void merge(int arr[], int left, int mid, int right) {
-    int n1 = mid - left + 1;
-    int n2 = right - mid;
+    int l1 = mid - left + 1;
+    int l2 = right - mid;
+    int L[l1], R[l2];
 
-    int L[n1], R[n2];
-
-    for (int i = 0; i < n1; i++)
+    for (int i = 0; i < l1; i++)
         L[i] = arr[left + i];
-    for (int j = 0; j < n2; j++)
+    for (int j = 0; j < l2; j++)
         R[j] = arr[mid + 1 + j];
 
-    int i = 0, j = 0, k = left;
-    while (i < n1 && j < n2) {
+    int i = 0;
+    int j = 0;
+    int k = left;
+    while (i < l1 && j < l2) {
         if (L[i] <= R[j]) {
             arr[k] = L[i];
             i++;
@@ -36,13 +78,13 @@ void merge(int arr[], int left, int mid, int right) {
         k++;
     }
 
-    while (i < n1) {
+    while (i < l1) {
         arr[k] = L[i];
         i++;
         k++;
     }
 
-    while (j < n2) {
+    while (j < l2) {
         arr[k] = R[j];
         j++;
         k++;
@@ -60,111 +102,79 @@ void merge_sort(int arr[], int left, int right) {
     }
 }
 
-void *sort_buckets(void *args) {
-    ThreadArgs *thread_args = (ThreadArgs *)args;
-    int start_bucket = thread_args->thread_id * (NUM_BUCKETS / NUM_THREADS);
-    int end_bucket = (thread_args->thread_id + 1) * (NUM_BUCKETS / NUM_THREADS);
-    
-    for (int i = start_bucket; i < end_bucket; i++) {
-        if (thread_args->buckets[i][0] != -1) {
-            merge_sort(thread_args->buckets[i], 0, NUM_ELEMENTS - 1);
-        }
-    }
-
-    pthread_exit(NULL);
-}
-
-void merge_buckets(int buckets[][NUM_ELEMENTS], int arr[], int n) {
-    int index = 0;
+void merge_buckets(int buckets[][NUM_ELEMENTS], int arr[]) {
+    int id = 0;
     for (int i = 0; i < NUM_BUCKETS; i++) {
         for (int j = 0; j < NUM_ELEMENTS; j++) {
             if (buckets[i][j] != -1) {
-                arr[index++] = buckets[i][j];
+                arr[id++] = buckets[i][j];
             }
         }
     }
-
-    // Sort the merged array using any sorting algorithm
-    merge_sort(arr, 0, n - 1);
 }
 
-void bucket_sort(int arr[], int n) {
+void bucket_sort(int arr[]) {
     int buckets[NUM_BUCKETS][NUM_ELEMENTS];
     pthread_t threads[NUM_THREADS];
-    ThreadArgs thread_args[NUM_THREADS];
-
-    // Initialize buckets
+    thread_args thread_args[NUM_THREADS];
+    int buckets_for_thread = NUM_BUCKETS / NUM_THREADS;
     for (int i = 0; i < NUM_BUCKETS; i++) {
         for (int j = 0; j < NUM_ELEMENTS; j++) {
             buckets[i][j] = -1;
         }
     }
 
-    // Distribute elements into buckets
-    for (int i = 0; i < n; i++) {
-        int bucket_index = arr[i] / (100 / NUM_BUCKETS); // Assuming elements are in the range 0-99
-        int pos = 0;
-        while (buckets[bucket_index][pos] != -1) {
-            pos++;
-        }
-        buckets[bucket_index][pos] = arr[i];
-    }
+   
+       for (int i = 0; i < NUM_ELEMENTS; i++) {
+        int element = arr[i];
+        int bucket_id = element / (100 / NUM_BUCKETS);
 
-    // Create threads and sort buckets
-    for (int i = 0; i < NUM_THREADS; i++) {
-        thread_args[i].thread_id = i;
-        for (int j = 0; j < NUM_BUCKETS; j++) {
-            for (int k = 0; k < NUM_ELEMENTS; k++) {
-                thread_args[i].buckets[j][k] = buckets[j][k];
+        
+        for (int j = 0; j < NUM_ELEMENTS; j++) {
+            if (buckets[bucket_id][j] == -1) {
+                buckets[bucket_id][j] = element;
+                break; 
             }
         }
-        pthread_create(&threads[i], NULL, sort_buckets, (void *)&thread_args[i]);
     }
 
-    // Join threads
-    for (int i = 0; i < NUM_THREADS; i++) {
-        pthread_join(threads[i], NULL);
-    }
+    for(int i=0;i<NUM_THREADS;i++){
+        thread_args[i].arr = buckets;
+        thread_args[i].left = i * buckets_for_thread;
+        thread_args[i].right = (i + 1) * buckets_for_thread;
 
-    // Merge sorted buckets into the original array
-    merge_buckets(buckets, arr, n);
+        
+        if (i == NUM_THREADS - 1) {
+            thread_args[i].right = NUM_BUCKETS;
+        }
+        pthread_create(&threads[i], NULL, runner,(void*) &thread_args[i]);
+    }
+     for (int i = 0; i < NUM_THREADS; i++) {
+        pthread_join(threads[i], NULL); 
+    }
+   
+    merge_buckets(buckets, arr);
 }
 
+
+void * runner(void * args){
+    thread_args * t_args = (thread_args *) args;
+    for (int i = t_args->left; i < t_args->right; i++) {
+        if (t_args->arr[i][0] != -1) {
+            merge_sort(t_args->arr[i], 0, NUM_ELEMENTS - 1);
+        }
+    }
+    pthread_exit(0);
+}
 void print_array(int arr[], int n) {
     for (int i = 0; i < n; i++) {
         printf("%d ", arr[i]);
     }
     printf("\n");
 }
-
 void fill_array(int arr[]){
     srand(time(NULL));
     for (int i = 0; i < NUM_ELEMENTS; ++i) {
         arr[i] = rand() % 100;
     }
-}
-
-int main() {
-    clock_t start, end;
-    double total_time;
-    int arr[NUM_ELEMENTS];
-    
-    
-    fill_array(arr);
-    int n = sizeof(arr) / sizeof(arr[0]);
-    
-    printf("Unsorted Array:\n");
-    print_array(arr, n);
-    
-    start = clock();
-    bucket_sort(arr, n);
-    end = clock();
-
-    printf("Sorted Array:\n");
-    print_array(arr, n);
-    
-    total_time = ((double) (end - start)) / CLOCKS_PER_SEC;
-    printf("Time taken: %f seconds\n", total_time);
-
-    return 0;
 }

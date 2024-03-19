@@ -5,6 +5,11 @@
 #define NUM_BUCKETS 10
 #define NUM_ELEMENTS 1000
 
+void merge(int arr[], int left, int mid, int right);
+void merge_sort(int arr[], int left, int right);
+void merge_buckets(int buckets[][NUM_ELEMENTS], int arr[]);
+void bucket_sort(int arr[]);
+
 void merge(int arr[], int left, int mid, int right) {
     int n1 = mid - left + 1;
     int n2 = right - mid;
@@ -66,16 +71,16 @@ void merge_buckets(int buckets[][NUM_ELEMENTS], int arr[], int n) {
 void bucket_sort(int arr[], int n) {
     int buckets[NUM_BUCKETS][NUM_ELEMENTS];
 
-    // Initialize buckets
+    
     for (int i = 0; i < NUM_BUCKETS; i++) {
         for (int j = 0; j < NUM_ELEMENTS; j++) {
             buckets[i][j] = -1;
         }
     }
 
-    // Distribute elements into buckets
+    
     for (int i = 0; i < n; i++) {
-        int bucket_index = arr[i] / (100 / NUM_BUCKETS); // Assuming elements are in the range 0-99
+        int bucket_index = arr[i] / (100 / NUM_BUCKETS); 
         int pos = 0;
         while (buckets[bucket_index][pos] != -1) {
             pos++;
@@ -83,14 +88,14 @@ void bucket_sort(int arr[], int n) {
         buckets[bucket_index][pos] = arr[i];
     }
 
-    // Sort each bucket
+    
     for (int i = 0; i < NUM_BUCKETS; i++) {
-        if (buckets[i][0] != -1) { // Check if the bucket is not empty
+        if (buckets[i][0] != -1) { 
             merge_sort(buckets[i], 0, NUM_ELEMENTS - 1);
         }
     }
 
-    // Merge sorted buckets into the original array
+    
     merge_buckets(buckets, arr, n);
 }
 
